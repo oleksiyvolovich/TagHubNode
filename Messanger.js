@@ -32,6 +32,7 @@ const TagHubUserDataSchema = new mongoose.Schema({
     additionalData:[String]
 })
 const messageSchema = new mongoose.Schema({
+    mediaFiles: [String],
     guid:String,
     text: String,
     author: String,
@@ -43,6 +44,9 @@ const messageSchema = new mongoose.Schema({
 const commentSchema = new mongoose.Schema({
     messageGUID: { type: String, required: true },
     comments: [messageSchema]
+});
+const logSchema = new mongoose.Schema({
+    message:String
 });
 
 TagHubUserSchema.pre('save', function(next) {
@@ -69,9 +73,11 @@ const TagHubUser = mongoose.model('TagHubUser', TagHubUserSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Comment = mongoose.model('Comment', commentSchema);
 const Channel = mongoose.model("Channel",channelSchema)
+const LogModel= mongoose.model("LogModel", logSchema);
 
 // Парсинг тела запроса
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 
 const filePath = path.join(__dirname, 'AuthKey_2KM5Q88N5G.p8');
 
@@ -210,6 +216,15 @@ app.post('/register', async (req, res) => {
         console.log("registration failed");
     }
 });
+
+
+app.post('/logs', (req, res) => {
+    const log = new LogModel(req.body);
+
+    console.log(log.message);
+    res.send('log has been posted');
+});
+
 
 app.post('/messages', (req, res) => {
     const message = new Message(req.body);
