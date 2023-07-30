@@ -14,6 +14,12 @@ mongoose.connect('mongodb://localhost/taghub', { useNewUrlParser: true, useUnifi
     .then(() => console.log("server connected to taghub"))
     .catch((err) => console.log(err));
 
+
+const chatSchema = new mongoose.Schema({
+    targetUser:String,
+    messagesGUIDs:[String]
+});
+
 const channelSchema = new mongoose.Schema({
     name:String,
     tags: [String]
@@ -74,6 +80,7 @@ const Message = mongoose.model('Message', messageSchema);
 const Comment = mongoose.model('Comment', commentSchema);
 const Channel = mongoose.model("Channel",channelSchema)
 const LogModel= mongoose.model("LogModel", logSchema);
+const ChatModel= mongoose.model("ChatModel", chatSchema);
 
 // Парсинг тела запроса
 app.use(bodyParser.json({limit: '50mb'}));
@@ -92,9 +99,6 @@ const options = {
 };
 
 const apnProvider = new apn.Provider(options);
-
-// Настраиваем change stream на коллекцию messages
-
 
 app.post('/comments', async (req, res) => {
     const { messageGUID, comments } = req.body;
@@ -148,7 +152,6 @@ app.post('/updateUserData', async (req, res) => {
     }
 });
 
-
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -190,8 +193,6 @@ app.post('/login', async (req, res) => {
     }
 });
 
-
-
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
     console.log("registration request");
@@ -217,14 +218,12 @@ app.post('/register', async (req, res) => {
     }
 });
 
-
 app.post('/logs', (req, res) => {
     const log = new LogModel(req.body);
 
     console.log(log.message);
     res.send('log has been posted');
 });
-
 
 app.post('/messages', (req, res) => {
     const message = new Message(req.body);
@@ -309,6 +308,24 @@ app.delete('/messages/:id', (req, res) => {
             console.error(err);
             res.status(500).send('Error deleting message');
         });
+});
+
+
+// get messages by GUID
+app.get('/likedmessages', async (req, res) => {
+    const guids = req.query.guids.split(',');
+    
+    console.log(guids);
+
+    try {
+        // Используем метод find для поиска сообщений с переданными GUID-ами
+        const messages = await Message.find({ guid: { $in: guids } });
+
+        return res.status(200).json(messages);
+    } catch (error) {
+        console.error('Ошибка при поиске сообщений:', error);
+        return res.status(500).json({ error: 'An error occurred while fetching messages.' });
+    }
 });
 
 app.get('/messages', (req, res) => {
