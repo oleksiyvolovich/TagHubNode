@@ -16,6 +16,7 @@ mongoose.connect('mongodb://localhost/taghub', { useNewUrlParser: true, useUnifi
 
 
 const chatSchema = new mongoose.Schema({
+    guid:String,
     targetUser:String,
     messagesGUIDs:[String]
 });
@@ -35,7 +36,8 @@ const TagHubUserDataSchema = new mongoose.Schema({
     likedMessagesGUIDS:[String],
     channelModels:[channelSchema],
     postedMessagesGUIDS:[String],
-    additionalData:[String]
+    additionalData:[String],
+    chats:[chatSchema]
 })
 const messageSchema = new mongoose.Schema({
     mediaFiles: [String],
@@ -128,7 +130,7 @@ app.post('/comments', async (req, res) => {
 });
 
 app.post('/updateUserData', async (req, res) => {
-    const { username, likedMessagesGUIDS, postedMessagesGUIDS,channelModels,additionalData } = req.body;
+    const { username, likedMessagesGUIDS, postedMessagesGUIDS,channelModels,additionalData,chats} = req.body;
 
     try {
         // Находим данные пользователя в базе данных
@@ -143,6 +145,7 @@ app.post('/updateUserData', async (req, res) => {
         userData.postedMessagesGUIDS = postedMessagesGUIDS;
         userData.channelModels = channelModels;
         userData.additionalData = additionalData;
+        userData.chats = chats;
         await userData.save();
 
         // Возвращаем обновленный объект данных пользователя
@@ -270,6 +273,58 @@ app.post('/messages', (req, res) => {
         })
         .catch((err) => res.status(400).send('Unable to save to database'));
 });
+app.post('/privatemessages/:guid/:targetUserName',async (req, res) => {
+    const chatGuid = req.params.guid;
+    const targetUserName = req.params.targetUserName;
+    const message = new Message(req.body);
+
+    console.log(message);
+
+    await message.save();
+    
+    try {
+        // Находим данные пользователя в базе данных
+        const userData = await TagHubUserData.findOne({"username":targetUserName})
+
+        console.log("User data was found = " + targetUserName);
+        
+        if (!userData) {
+            // Если данных пользователя нет, вернем ошибку
+            return res.status(404).json({ error: "User data not found" });
+        }
+        
+        const existingChat = userData.chats.find(chat => chat.guid == chatGuid);
+
+        if (!existingChat) 
+        {
+            console.log("chat wasn`t found. Create a new chat");
+            // Создаем новый чат
+            const newChat = {
+                guid:chatGuid,
+                targetUser:message.author,
+                messagesGUIDs: [message.guid]
+            };
+
+            console.log(newChat.guid +  " " + newChat.targetUser);
+            userData.chats.push(newChat);
+            console.log("push message to targetUserData");
+            
+        }else {
+            if (!existingChat.messagesGUIDs) {
+                existingChat.messagesGUIDs = []; // Инициализируем массив, если он null
+            }
+            existingChat.messagesGUIDs.push(message.guid);
+            console.log("message was written to existed chat");
+        }
+        
+        await userData.save();
+
+        // Возвращаем обновленный объект данных пользователя
+        return res.status(200).json(message);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
 
 app.put('/messages/:id', (req, res) => {
     console.log("put request");
@@ -309,7 +364,6 @@ app.delete('/messages/:id', (req, res) => {
             res.status(500).send('Error deleting message');
         });
 });
-
 
 // get messages by GUID
 app.get('/likedmessages', async (req, res) => {
