@@ -1,0 +1,18 @@
+# Components
+node_modules
+ecosystem-local.json
+# Editor
+.idea
+.vs
+.vscode
+bourbon/
+neat/
+*.sublime-project
+*.sublime-workspace
+
+# Other
+coverage/
+*.log
+
+\.nvmrc
+

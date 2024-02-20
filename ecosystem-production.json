@@ -1,0 +1,21 @@
+{
+  "apps" : [
+    {
+      "name": "tag-hub-api",
+      "script": "./index.js",
+      "watch": true,
+      "env": {
+        "NODE_ENV": "production",
+        "NODE_PATH": "/var/app/current/",
+        "TZ": "UTC",
+        "PORT": 8000,
+        "DATABASE_USERNAME": "admin",
+        "DATABASE_PASSWORD": "admin",
+        "DATABASE_NAME": "taghub",
+        "DATABASE_HOST": "localhost",
+        "APN_KEY_ID": "2KM5Q88N5G",
+        "APN_TEAM_ID": "XSJJ46AGM5",
+        "APN_TOPIC": "com.alexeyvolovych.taghub"
+      }
+    }]
+}
