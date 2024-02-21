@@ -4,14 +4,16 @@
 const express = require('express');
 const http = require('http');
 const bodyParser = require('body-parser');
+const socketIo = require('socket.io');
 
 // app packages
 const _ = require('lodash');
 
-// middlewares
+// components
 const Cors = require('./components/cors');
 const Auth = require('./components/auth');
 const Routes = require('./components/routes');
+const Socket = require('./components/socket');
 const Database = require('./database');
 
 class Server {
@@ -51,9 +53,15 @@ class Server {
 		await this.setCore();
 		await this.setRoutes();
 
+		/** Initialization Database connection **/
 		await Database.init();
 
+		/** Creating node HTTP server **/
 		const server = http.createServer(this.app);
+
+		/** Initialization socket connection **/
+		await Socket.init(socketIo(server));
+
 		server.listen(this.port, () => {
 			console.log(`The server is running at http://localhost:${this.port}`);
 		});
