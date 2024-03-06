@@ -4,15 +4,15 @@
 const db = require('../database');
 
 class UserController {
-	async update(req, res){
-		const{username, likedMessagesGUIDS, postedMessagesGUIDS, channelModels, additionalData, chats} = req.body;
+	async update(req, res) {
+		const { username, likedMessagesGUIDS, postedMessagesGUIDS, channelModels, additionalData, chats } = req.body;
 
-		try{
+		try {
 			// Находим данные пользователя в базе данных
-			const userData = await db.models.userData.findOne({username});
-			if(!userData){
+			const userData = await db.models.userData.findOne({ username });
+			if (!userData) {
 				// Если данных пользователя нет, вернем ошибку
-				return res.status(404).json({error: 'User data not found'});
+				return res.status(404).json({ error: 'User data not found' });
 			}
 
 			// Обновляем поля данных пользователя
@@ -25,8 +25,8 @@ class UserController {
 
 			// Возвращаем обновленный объект данных пользователя
 			return res.status(200).json(userData);
-		}catch(err){
-			return res.status(400).json({error: err.message});
+		}catch (err) {
+			return res.status(400).json({ error: err.message });
 		}
 	}
 }

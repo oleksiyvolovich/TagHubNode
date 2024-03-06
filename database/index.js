@@ -8,7 +8,7 @@ const config = require('../config');
 const setModels = require('./models');
 
 class Database {
-	constructor(){
+	constructor() {
 		this.init().then((db) => {
 			/** Setting DB instance **/
 			this.db = db;
@@ -18,13 +18,13 @@ class Database {
 		});
 	}
 
-	async init(){
-		try{
-			if(_.isNil(this.connection)){
+	async init() {
+		try {
+			if (_.isNil(this.connection)) {
 				this.connection = await mongoose.connect(`mongodb://${config.db.host}/${config.db.name}`);
 			}
 			return this.connection;
-		}catch(error){
+		}catch (error) {
 			console.log(`DATABASE CONNECTION ERROR: ${error}`);
 		}
 	}

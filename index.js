@@ -17,16 +17,16 @@ const Socket = require('./components/socket');
 const Database = require('./database');
 
 class Server {
-	constructor(){
+	constructor() {
 		this.app = express();
 		this.port = _.parseInt(process.env.PORT, 10) || 9001;
 	}
 
-	async setCore(){
+	async setCore() {
 		this.app.set('port', this.port);
 
-		this.app.use(bodyParser.json({limit: '50mb'}));
-		this.app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+		this.app.use(bodyParser.json({ limit: '50mb' }));
+		this.app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 		// Auth verifier
 		this.app.use(Auth.verifier);
@@ -44,12 +44,12 @@ class Server {
 		});
 	}
 
-	async setRoutes(){
+	async setRoutes() {
 		const routesInstance = new Routes(this.app);
 		return routesInstance.init();
 	}
 
-	async start(){
+	async start() {
 		await this.setCore();
 		await this.setRoutes();
 
@@ -60,7 +60,7 @@ class Server {
 		const server = http.createServer(this.app);
 
 		/** Initialization socket connection **/
-		await Socket.init(socketIo(server));
+		await Socket.init(server);
 
 		server.listen(this.port, () => {
 			console.log(`The server is running at http://localhost:${this.port}`);

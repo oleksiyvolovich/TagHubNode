@@ -1,75 +1,75 @@
 'use strict';
+
 // app packages
+const _ = require('lodash');
 const bcrypt = require('bcrypt');
 const db = require('../database');
+const Auth = require('../components/auth');
+const Validator = require('../components/validator');
 
 class AuthController {
-	async login(req, res){
-		const{username, password} = req.body;
+	async login(req, res) {
+		const { isValid, errors } = Validator.validateFields(req);
+		if (!isValid) {
+			return res.status(400).json(errors);
+		}
 
-		try{
-			// Проверяем, существует ли пользователь в базе данных
-			const user = await db.models.user.findOne({username});
-			if(!user){
-				return res.status(401).json({error: 'Incorrect username or password'});
+		const { email, password } = req.body;
+
+		try {
+			// Checking if the user exists
+			const user = await db.models.user
+				.findOne({ email })
+				.select('-device -__v -email')
+				.populate('channels');
+			if (!user) {
+				return res.status(400).json({ errors: ['Wrong Credentials'] });
 			}
 
-			console.log(user);
-
-			// Проверяем, соответствует ли пароль
-			const validPassword = await bcrypt.compare(password, user.password);
-			if(!validPassword){
-				return res.status(401).json({error: 'Incorrect username or password'});
+			// Checking and comparing password
+			const isValidPassword = await bcrypt.compare(password, user.password);
+			if (!isValidPassword) {
+				return res.status(400).json({ errors: ['Wrong Credentials'] });
 			}
 
-			// Ищем данные пользователя в базе данных
-			const userData = await db.models.userData.findOne({username}, {_id: 0, __v: 0});
-			if(!userData){
-				// Если данных пользователя нет, создаем новый объект данных пользователя
-				const newUserData = new db.models.userData({
-					username: user.username,
-					likedMessagesGUIDS: [],
-					channelModels: [],
-					postedMessagesGUIDS: [],
-					additionalData: []
-				});
-				await newUserData.save();
+			// Generating auth token
+			const token = Auth.generateAuthToken({ userId: user.id });
+			const response = _.omit(user._doc, ['password', '__v', '_id']);
 
-				// Возвращаем новый объект данных пользователя
-				return res.status(200).json(newUserData);
-			}
-
-			// Если данные пользователя уже существуют, возвращаем их
-			return res.status(200).json(userData);
-		}catch(err){
-			res.status(400).json({error: err.message});
+			return res.status(200).json({ token, user: response });
+		}catch (err) {
+			res.status(400).json({ error: err.message });
 		}
 	}
 
-	async register(req, res){
-		const{username, password} = req.body;
+	async register(req, res) {
+		const { email, password } = req.body;
 
-		try{
+		/** Validate required fields **/
+		const { isValid, errors } = Validator.validateFields(req);
+		if (!isValid) {
+			return res.status(400).json({ errors });
+		}
+
+		const isExisted = await db.models.user.findOne({ email });
+		if (isExisted) {
+			return res.status(400).json({ errors: { email: 'User with such email already exist' } });
+		}
+
+		try {
 			const user = await db.models.user.create({
-				username,
-				password: bcrypt.hashSync(password, 10)
+				email,
+				password: bcrypt.hashSync(password, 10),
+
+				channels: [],
+				createdPostsGUIDS: [],
+				savedMessagesGUIDS: []
 			});
 
-			const newUserData = new db.models.userData({
-				username: username,
-				likedMessagesGUIDS: [],
-				channelModels: [],
-				postedMessagesGUIDS: [],
-				additionalData: []
-			});
-			await newUserData.save();
-
-			console.log('registration success for user ' + username);
-
-			return res.status(201).json({success: true, user});
-		}catch(err){
-			console.log('registration failed');
-			return res.status(400).json({error: err.message});
+			const response = _.omit(user._doc, ['password', '__v', '_id']);
+			return res.status(201).json({ success: true, user: response });
+		}catch (err) {
+			return res.status(400).json({ errors: [err.message] });
 		}
 	}
 }

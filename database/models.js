@@ -2,56 +2,77 @@
 
 // eslint-disable-next-line func-style
 const setModels = (mongoose) => {
-	/** Chat && Channel && Messages **/
-	const chatSchema = new mongoose.Schema({
-		guid: String,
-		targetUser: String,
-		messagesGUIDs: [String]
-	});
-	const channelSchema = new mongoose.Schema({
+	const Schema = mongoose.Schema;
+
+	const UserSchema = new Schema({
+		email: { type: String, required: true, unique: true },
+		password: { type: String, required: true },
+
+		device: { id: String, token: String },
+
+		// relations
+		channels: [{ type: Schema.Types.ObjectId, ref: 'channel' }],
+		createdPosts: [{ type: Schema.Types.ObjectId, ref: 'post' }],
+		savedPosts: [{ type: Schema.Types.ObjectId, ref: 'post' }]
+	}, { timestamps: true });
+
+	const ChannelSchema = new Schema({
 		name: String,
-		tags: [String]
-	});
-	const messageSchema = new mongoose.Schema({
-		mediaFiles: [String],
-		guid: String,
+		tags: [String],
+
+		// relations
+		createdBy: { type: Schema.Types.ObjectId, ref: 'user' } // user._id
+	}, { timestamps: true });
+
+	const PostSchema = new Schema({
 		text: String,
-		author: String,
-		creationTime: String,
-		tags: [String]
-	});
+		files: [String],
+		postedAt: String,
 
-	/** User && User Data **/
-	const TagHubUserSchema = new mongoose.Schema({
-		username: {type: String, required: true, unique: true},
-		password: {type: String, required: true}
-	});
-	const TagHubUserDataSchema = new mongoose.Schema({
-		username: {type: String, required: true, unique: true},
-		likedMessagesGUIDS: [String],
-		channelModels: [channelSchema],
-		postedMessagesGUIDS: [String],
-		additionalData: [String],
-		chats: [chatSchema]
-	});
+		tags: [String],
+		location: new Schema({
+			type: {
+				type: String,
+				enum: ['Point'] // Ensure that the type is 'Point'
+			},
+			coordinates: {
+				type: [Number] // Array of [longitude, latitude]
+			}
+		}),
 
-	/** Comment && Log **/
-	const commentSchema = new mongoose.Schema({
-		messageGUID: {type: String, required: true},
-		comments: [messageSchema]
-	});
-	const logSchema = new mongoose.Schema({
-		message: String
-	});
+		// relations
+		createdBy: { type: Schema.Types.ObjectId, ref: 'user' }, // user._id
+		comments: [{ type: Schema.Types.ObjectId, ref: 'posts_comments' }]
+	}, { timestamps: true });
+
+	const PostCommentSchema = new Schema({
+		postId: { type: Schema.Types.ObjectId, ref: 'post', required: true },
+		text: String,
+		files: [String],
+		createdBy: String, // user._id
+		postedAt: String
+	}, { timestamps: true });
+
+	const ConversationSchema = new Schema({
+		members: [String],
+
+		// relations
+		messages: [{ type: Schema.Types.ObjectId, ref: 'conversations_messages' }]
+	}, { timestamps: true });
+
+	const ConversationMessageSchema = new Schema({
+		conversationId: { type: Schema.Types.ObjectId, ref: 'conversation', required: true },
+		senderId: String, // user_.id
+		text: String
+	}, { timestamps: true });
 
 	return {
-		user: mongoose.model('TagHubUser', TagHubUserSchema),
-		userData: mongoose.model('TagHubUserData', TagHubUserDataSchema),
-		message: mongoose.model('Message', messageSchema),
-		comment: mongoose.model('Comment', commentSchema),
-		channel: mongoose.model('Channel', channelSchema),
-		log: mongoose.model('LogModel', logSchema),
-		chat: mongoose.model('ChatModel', chatSchema)
+		user: mongoose.model('user', UserSchema),
+		channel: mongoose.model('channel', ChannelSchema),
+		post: mongoose.model('post', PostSchema),
+		postComments: mongoose.model('posts_comments', PostCommentSchema),
+		conversation: mongoose.model('conversation', ConversationSchema),
+		conversationMessage: mongoose.model('conversations_messages', ConversationMessageSchema)
 	};
 };
 

@@ -3,9 +3,10 @@
 const _ = require('lodash');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const db = require('../database');
 
 class Auth {
-	constructor(){}
+	constructor() {}
 
 	/**
      * Check user authorized
@@ -15,9 +16,9 @@ class Auth {
      * @param {Function} next - The next function for express.
      * @return {Object} The passport.authenticate object
      */
-	checkAuthorize(request, response, next){
-		const userId = request.decodedToken && request.decodedToken.user_id || null;
-		if(!userId){
+	checkAuthorize(request, response, next) {
+		const userId = request.user && request.user._id || null;
+		if (!userId) {
 			return response.status(401).send('request unauthorized');
 		}
 		return next();
@@ -29,8 +30,8 @@ class Auth {
 	 * @param {Object} data - data for the generate jwt auth token
 	 * @return {String} JWT Auth Token
 	 */
-	generateAuthToken(data){
-		return jwt.sign(data, config.jwt.secret, {expiresIn: config.jwt.expiresIn});
+	generateAuthToken(data) {
+		return jwt.sign(data, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
 	}
 
 	/**
@@ -41,13 +42,17 @@ class Auth {
      * @param {Function} next - The next function for express.
      * @return {Object} The passport.authenticate object
      */
-	verifier(request, response, next){
+	async verifier(request, response, next) {
 		const token = _.get(request, 'headers.x-access-token', null);
-		try{
-			request.decodedToken = token ? jwt.decode(token, config.jwt.secret) : {};
+		try {
+			const verified = token ? jwt.decode(token, config.jwt.secret) : {};
+			const user = await db.models.user.findOne({ _id: verified.userId });
+			if (user) {
+				request.user = _.omit(user._doc, ['password', '__v']);
+			}
 			return next();
-		}catch(err){
-			return response.status(401).send('request unauthorized');
+		}catch (err) {
+			return response.status(401).send('request unauthorized 11');
 		}
 	}
 }
